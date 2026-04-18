@@ -1,0 +1,3 @@
+WATCH_DIRECTORY = "./watched_dir"
+RISK_THRESHOLD = 50
+SUPPORTED_EXTENSIONS = [".py"]
