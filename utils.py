@@ -1,9 +1,16 @@
 import shutil
 import os
 
+import shutil
+import os
+
 def create_backup(file_path):
+    if "_backup" in file_path:
+        return None  # 🚫 don't backup backup files
+
     base, ext = os.path.splitext(file_path)
     backup_path = base + "_backup" + ext
+
     shutil.copy(file_path, backup_path)
     return backup_path
 

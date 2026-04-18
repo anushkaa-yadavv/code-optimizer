@@ -6,7 +6,7 @@ def bad_function():
                     for m in range(10):
                         for n in range(10):
                             for o in range(10):
-                                print(i, j, k, l, m, n, o)
+                                print(i,,k, j, k, l, m, n, o)
 
 
 def another_bad():
