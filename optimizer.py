@@ -2,13 +2,14 @@ import autopep8
 import ast
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+import google.generativeai as genai
 
-load_dotenv(override=True)
+load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# 🔑 Gemini API setup
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-
+model = genai.GenerativeModel("gemini-2.5-flash")
 class CodeOptimizer:
     def __init__(self, code):
         self.code = code
@@ -25,29 +26,26 @@ class CodeOptimizer:
 
     def ai_optimize(self, code):
         try:
-            print("🧠 Calling AI model...")
+            print("🧠 Calling Gemini AI...")
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"""
-You are a code optimizer.
+            prompt = f"""
+You are a professional Python code optimizer.
 
-Improve this Python code:
-- better structure
-- remove bad practices
-- keep same functionality
+Tasks:
+- Improve code readability
+- Remove bad practices
+- Optimize performance
+- DO NOT change functionality
+
+Return ONLY valid Python code.
 
 Code:
 {code}
 """
-                    }
-                ]
-            )
 
-            return response.choices[0].message.content
+            response = model.generate_content(prompt)
+
+            return response.text
 
         except Exception as e:
             return f"AI error: {e}"
@@ -63,10 +61,10 @@ Code:
         print(ai_code)
         print("------ AI OUTPUT END ------\n")
 
-        # fallback safety
-        final_code = formatted_code
+        # 🔥 IMPORTANT FIX (use AI output properly)
+        final_code = ai_code if self.validate_syntax(ai_code) else formatted_code
 
         if self.validate_syntax(final_code):
-            return final_code, "AI + Formatting applied"
+            return final_code, "Gemini AI + Formatting applied"
         else:
             return self.code, "Fallback used (syntax issue)"
