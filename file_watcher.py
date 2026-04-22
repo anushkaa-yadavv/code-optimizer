@@ -1,6 +1,7 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
+import os
 
 from analyzer import CodeAnalyzer
 from optimizer import CodeOptimizer
@@ -12,42 +13,73 @@ class CodeEventHandler(FileSystemEventHandler):
 
     def __init__(self):
         self.last_run = 0
+        self.processing_files = set()
 
     def on_modified(self, event):
         if event.is_directory:
             return
 
+        file_path = event.src_path
+
+        # ❌ Ignore backup / hidden / temp files
+        if (
+            file_path.endswith(".bak")
+            or "_backup" in file_path
+            or "/." in file_path
+        ):
+            return
+
+        # ❌ Avoid infinite loop
+        if file_path in self.processing_files:
+            return
+
         current_time = time.time()
 
-        # Debounce (avoid multiple triggers)
-        if current_time - self.last_run < 1:
+        # 🔥 Better debounce (slow spam fix)
+        if current_time - self.last_run < 2:
             return
 
         self.last_run = current_time
 
-        file_path = event.src_path
-
+        # ❌ Only supported files
         if not any(file_path.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
             return
 
         print(f"\n📄 File changed: {file_path}")
 
         try:
+            self.processing_files.add(file_path)
+
             code = read_file(file_path)
+
+            # ❌ Ignore very small files
+            if len(code.strip()) < 10:
+                print("⚠️ Skipped (file too small)")
+                return
 
             analyzer = CodeAnalyzer(code)
             result = analyzer.analyze()
 
-            print(f"⚠️ Risk Score: {result['risk_score']}")
+            risk = result.get("risk_score", 0)
+
+            print(f"⚠️ Risk Score: {risk}")
+            print(f"🎯 Threshold: {RISK_THRESHOLD}")  # 🔥 DEBUG FIX
+
             print("Issues:")
-            for issue in result["issues"]:
+            for issue in result.get("issues", []):
                 print(f" - {issue}")
 
-            if result["risk_score"] > RISK_THRESHOLD:
+            # 🔥 FIXED CONDITION (>= instead of >)
+            if risk >= RISK_THRESHOLD:
                 print("🚀 Optimization triggered...")
 
-                backup_path = create_backup(file_path)
-                print(f"Backup created: {backup_path}")
+                # ✅ Create backup only once
+                backup_path = file_path + ".bak"
+                if not os.path.exists(backup_path):
+                    create_backup(file_path)
+                    print(f"📦 Backup created: {backup_path}")
+                else:
+                    print("📦 Backup already exists")
 
                 optimizer = CodeOptimizer(code)
                 new_code, status = optimizer.optimize()
@@ -57,11 +89,15 @@ class CodeEventHandler(FileSystemEventHandler):
                     print(f"✅ {status}")
                 else:
                     print("❌ Optimization skipped (invalid syntax)")
+
             else:
                 print("✔ No optimization needed")
 
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"❌ Error: {e}")
+
+        finally:
+            self.processing_files.discard(file_path)
 
 
 def start_watching(directory):
