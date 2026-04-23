@@ -20,12 +20,13 @@ class CodeEventHandler(FileSystemEventHandler):
             return
 
         file_path = event.src_path
+        filename = os.path.basename(file_path)
 
         # ❌ Ignore backup / hidden / temp files
         if (
-            file_path.endswith(".bak")
-            or "_backup" in file_path
-            or "/." in file_path
+             filename.endswith(".bak")
+            or "_backup" in filename
+            or filename.startswith(".")
         ):
             return
 
@@ -39,7 +40,7 @@ class CodeEventHandler(FileSystemEventHandler):
         if current_time - self.last_run < 2:
             return
 
-        self.last_run = current_time
+      
 
         # ❌ Only supported files
         if not any(file_path.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
@@ -85,18 +86,20 @@ class CodeEventHandler(FileSystemEventHandler):
                 new_code, status = optimizer.optimize()
 
                 if optimizer.validate_syntax(new_code):
-                    write_file(file_path, new_code)
-                    print(f"✅ {status}")
-                else:
-                    print("❌ Optimization skipped (invalid syntax)")
+                    if new_code.strip() != code.strip():
+                        write_file(file_path, new_code)
+                        print(f"✅ {status}")
+                    else:  
+                        print("✔ No optimization needed")
 
-            else:
-                print("✔ No optimization needed")
+                else:
+                    print("❌ Optimization failed (syntax error), no changes made")
 
         except Exception as e:
             print(f"❌ Error: {e}")
 
         finally:
+            self.last_run = time.time()
             self.processing_files.discard(file_path)
 
 

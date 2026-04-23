@@ -15,4 +15,4 @@ def another_bad():
             for k in range(10):
                 for l in range(10):
                     print(i, j, k, l)
-                    print(i, j, kl)
+                    print(i, j, k, l)
