@@ -1,29 +1,36 @@
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter.scrolledtext import ScrolledText
+import threading
+import queue
 
-def show_popup(optimized_code):
-    root = tk.Tk()
-    root.title("Optimized version of your code")
+popup_queue = queue.Queue()
 
-    root.geometry("700x500")
 
-    # Title label
-    label = tk.Label(root, text="🚀 Optimized Code", font=("Arial", 16))
-    label.pack(pady=10)
+def popup_worker():
+    while True:
+        code = popup_queue.get()
 
-    # Text area
-    text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, font=("Courier", 10))
-    text_area.pack(expand=True, fill="both", padx=10, pady=10)
+        root = tk.Tk()
+        root.title("Optimized Code")
 
-    text_area.insert(tk.END, optimized_code)
+        text = ScrolledText(root, wrap=tk.WORD, width=100, height=30)
+        text.pack(padx=10, pady=10)
+        text.insert(tk.END, code)
 
-    # Copy button
-    def copy_code():
-        root.clipboard_clear()
-        root.clipboard_append(optimized_code)
-        root.update()
+        def copy_code():
+            root.clipboard_clear()
+            root.clipboard_append(code)
 
-    copy_btn = tk.Button(root, text="Copy Code", command=copy_code)
-    copy_btn.pack(pady=10)
+        btn = tk.Button(root, text="Copy Code", command=copy_code)
+        btn.pack(pady=5)
 
-    root.mainloop()
+        root.mainloop()
+
+
+def start_ui_loop():
+    t = threading.Thread(target=popup_worker, daemon=True)
+    t.start()
+
+
+def show_popup(code):
+    popup_queue.put(code)
