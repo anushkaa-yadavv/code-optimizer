@@ -26,7 +26,7 @@ class CodeOptimizer:
         except:
             return False
 
-    # 🔥 CLEAN AI OUTPUT (remove ```python blocks)
+    # 🔥 CLEAN AI OUTPUT
     def clean_ai_output(self, code):
         if not code:
             return ""
@@ -35,6 +35,51 @@ class CodeOptimizer:
         return code.strip()
 
     def ai_optimize(self, code):
+        try:
+            print("🧠 Calling Gemini AI...")
+
+            prompt = f"""
+You are a professional Python code optimizer.
+
+Rules:
+- Improve readability
+- Reduce complexity
+- Keep same functionality
+- Return ONLY valid Python code (no markdown, no explanation)
+
+Code:
+{code}
+"""
+
+            response = model.generate_content(prompt)
+            return self.clean_ai_output(response.text)
+
+        except Exception as e:
+            print(f"❌ AI Error: {e}")
+            return None
+
+    def optimize(self):
+        print("🚀 Formatting code...")
+        formatted_code = self.format_code()
+
+        print("🧠 Running AI optimization...")
+        ai_code = self.ai_optimize(formatted_code)
+
+        # 🔥 fallback if AI failed
+        if not ai_code:
+            return formatted_code, "Formatting only (AI failed)"
+
+        # 🔥 syntax validation
+        if not self.validate_syntax(ai_code):
+            print("⚠️ Invalid AI output, skipping...")
+            return formatted_code, "Formatting only (invalid AI output)"
+
+        # 🔥 avoid rewriting same code
+        if ai_code.strip() == self.code.strip():
+            print("⚠️ No real change detected")
+            return self.code, "No changes"
+
+        return ai_code, "Gemini AI optimization applied"    def ai_optimize(self, code):
         try:
             print("🧠 Calling Gemini AI...")
 
