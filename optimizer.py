@@ -10,6 +10,8 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel("gemini-2.5-flash")
+
+
 class CodeOptimizer:
     def __init__(self, code):
         self.code = code
@@ -24,6 +26,14 @@ class CodeOptimizer:
         except:
             return False
 
+    # 🔥 CLEAN AI OUTPUT (remove ```python blocks)
+    def clean_ai_output(self, code):
+        if not code:
+            return ""
+        if "```" in code:
+            code = code.replace("```python", "").replace("```", "")
+        return code.strip()
+
     def ai_optimize(self, code):
         try:
             print("🧠 Calling Gemini AI...")
@@ -31,10 +41,46 @@ class CodeOptimizer:
             prompt = f"""
 You are a professional Python code optimizer.
 
-Tasks:
-- Improve code readability
-- Remove bad practices
-- Optimize performance
+Rules:
+- Improve readability and make the code more optimize 
+- Reduce complexity
+- Keep same functionality
+- Return ONLY valid Python code (no markdown, no explanation , no comments)
+
+Code:
+{code}
+"""
+
+            response = model.generate_content(prompt)
+
+            return self.clean_ai_output(response.text)
+
+        except Exception as e:
+            print(f"❌ AI Error: {e}")
+            return None
+
+    def optimize(self):
+        print("🚀 Formatting code...")
+        formatted_code = self.format_code()
+
+        print("🧠 Running AI optimization...")
+        ai_code = self.ai_optimize(formatted_code)
+
+        # 🔥 fallback if AI failed
+        if not ai_code:
+            return formatted_code, "Formatting only (AI failed)"
+
+        # 🔥 syntax validation
+        if not self.validate_syntax(ai_code):
+            print("⚠️ AI returned invalid code, skipping...")
+            return formatted_code, "Formatting only (invalid AI output)"
+
+        # 🔥 IMPORTANT: avoid rewriting same code (fix infinite loop)
+        if ai_code.strip() == self.code.strip():
+            print("⚠️ No real change detected, skipping write")
+            return self.code, "No changes"
+
+        return ai_code, "Gemini AI optimization applied"- Optimize performance
 - DO NOT change functionality
 
 Return ONLY valid Python code.
