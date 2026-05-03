@@ -1,12 +1,27 @@
+import threading
+import queue
 from file_watcher import start_watching
-from config import WATCH_DIRECTORY
-import os
+from ui_popup import show_popup
 
-def main():
-    if not os.path.exists(WATCH_DIRECTORY):
-        os.makedirs(WATCH_DIRECTORY)
+# 🔥 Queue for communication
+popup_queue = queue.Queue()
 
-    start_watching(WATCH_DIRECTORY)
+
+def watcher_thread():
+    start_watching("./watched_dir", popup_queue)
+
+
+def ui_loop():
+    while True:
+        code = popup_queue.get()
+        if code:
+            show_popup(code)
+
 
 if __name__ == "__main__":
-    main()
+    # watcher runs in background
+    t = threading.Thread(target=watcher_thread, daemon=True)
+    t.start()
+
+    # UI runs in main thread
+    ui_loop()
